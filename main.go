@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/csv"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strconv"
@@ -14,17 +15,9 @@ func main() {
 	input, err := os.Open("./FRB_CP.csv")
 	if err != nil {
 		fmt.Println(err)
-	}
-	defer input.Close()
-
-	reader := csv.NewReader(input)
-	reader.FieldsPerRecord = -1 // infinite?????
-
-	data, err := reader.ReadAll()
-	if err != nil {
-		fmt.Println(err)
 		os.Exit(1)
 	}
+	defer input.Close()
 
 	writer, err := os.Create("./FRB_CP.txt")
 	if err != nil {
@@ -33,13 +26,24 @@ func main() {
 	}
 	defer writer.Close()
 
-	for _, i := range data {
-		if _, err = strconv.Atoi(i[0][0:1]); err == nil {
-			y, _ := strconv.Atoi(i[0][0:4])
-			m, _ := strconv.Atoi(i[0][6:7])
-			d, _ := strconv.Atoi(i[0][9:10])
+	reader := csv.NewReader(input)
+	//reader.FieldsPerRecord = -1 // infinite?????
+	for {
+		data, err := reader.Read()
+
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		if _, err = strconv.Atoi(data[0][0:1]); err == nil {
+			y, _ := strconv.Atoi(data[0][0:4])
+			m, _ := strconv.Atoi(data[0][6:7])
+			d, _ := strconv.Atoi(data[0][9:10])
 			f := fmt.Sprintf("%04d%02d%02d", y, m, d)
-			t := fmt.Sprintf("*3\r\n$3\r\nSET\r\n$%d\r\n%s\r\n$%d\r\n%s\r\n", len(f), f, len(i[6]), i[6])
+			t := fmt.Sprintf("*3\r\n$3\r\nSET\r\n$%d\r\n%s\r\n$%d\r\n%s\r\n", len(f), f, len(data[6]), data[6])
 			writer.WriteString(t)
 		}
 	}
